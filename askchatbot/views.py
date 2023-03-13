@@ -6,7 +6,7 @@ from django.conf import settings
 
 from .models import ConversationHistory, ChatbotBasic, Language, Ads, ChatbotSuggestions, ChatbotSuggestionsOptions
 from .serializers import ChatbotBasicSerializer, LanguageSerializer, AdsSerializer, ChatbotSuggestionsSerializer
-from .tasks import chatbot_response, get_rasa_response
+from .tasks import generate_response, generate_response_chat, get_rasa_response
 
 RASA_API = settings.RASA_API_URL
 
@@ -83,21 +83,56 @@ class ChatbotEndpoint(APIView):
         """
         user_input = request.data.get('user_input')
         language = request.data.get('language', "English")
+        room_id = request.data.get('room_id')
+
+        if room_id is None:
+            return Response({"error": "Room id not selected"})
+
         if user_input is None:
             return Response({"error": "No input values"})
 
-        # get last 15 conversation and pass to chatbot response
-        chatbot_prompt = ""
-        conversations = ConversationHistory.objects.filter(user=request.user).order_by('-created_at')[:15]
+        # get last 10 conversation and pass to chatbot response
+
+        # Old Regular model prompt
+        # chatbot_prompt = ""
+        # conversations = ConversationHistory.objects.filter(user=request.user).order_by('-created_at')[:10]
+        # for conversation in conversations:
+        #     if conversation.user_input is None:
+        #         conversation.user_input = ""
+        #     if conversation.chatbot_response is None:
+        #         conversation.chatbot_response = ""
+        #     chatbot_prompt += "user:" + conversation.user_input + "\nbot:" + conversation.chatbot_response + "\n"
+        # 
+        # chatbot_prompt += "user:" + user_input + "\nbot:"
+
+        # New GPT3.5 model prompt
+        chatbot_prompt = []
+        conversations = ConversationHistory.objects.filter(user=request.user, room_id=room_id).order_by('-created_at')[
+                        :10]
         for conversation in conversations:
             if conversation.user_input is None:
                 conversation.user_input = ""
             if conversation.chatbot_response is None:
                 conversation.chatbot_response = ""
-            chatbot_prompt += "user:" + conversation.user_input + "\nbot:" + conversation.chatbot_response + "\n"
 
-        chatbot_prompt += "user:" + user_input + "\nbot:"
+            # User text
+            chatbot_prompt.append(
+                {
+                    "role": "user", "content": conversation.user_input
+                }
+            )
 
+            # Bot Response
+            chatbot_prompt.append({
+                "role": "assistant", "content": conversation.chatbot_response
+            })
+
+        # Last conversation
+        chatbot_prompt.append(
+            {
+                "role": "user", "content": user_input
+            }
+        )
         # save the user input into database
         try:
             last_conversation = ConversationHistory.objects.filter(user=request.user).latest('conversation_id')
@@ -112,11 +147,11 @@ class ChatbotEndpoint(APIView):
             conversation.save()
 
         try:
-            task = get_rasa_response.apply_async(args=[user_input, conversation_id, language, chatbot_prompt])
+            task = generate_response_chat.apply_async(args=[user_input, conversation_id, language, chatbot_prompt])
             return Response({"task_id": task.id}, status=status.HTTP_200_OK)
         except Exception as e:
             print(e)
-            task = chatbot_response.apply_async(args=[chatbot_prompt, conversation_id, language])
+            task = generate_response_chat.apply_async(args=[chatbot_prompt, conversation_id, language])
             return Response({"task_id": task.id}, status=status.HTTP_200_OK)
 
     def get(self, request, format=None):
@@ -145,12 +180,12 @@ class ChatbotEndpoint(APIView):
                     print("-------Error-------")
                     print(response)
 
-                task = chatbot_response.apply_async(args=[response[2], response[1], response[3]])
+                task = generate_response.apply_async(args=[response[2], response[1], response[3]])
                 response = task.get()
 
         except Exception as e:
             print(e)
-            response = chatbot_response.AsyncResult(task_id).get()
+            response = generate_response.AsyncResult(task_id).get()
 
         print("______________")
         print(response)
