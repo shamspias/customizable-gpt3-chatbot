@@ -46,8 +46,16 @@ class DeleteConversationalHistory(APIView):
     """
 
     def get(self, request):
-        ConversationHistory.objects.filter(user=request.user).delete()
-        return Response({"message": "Deleted"}, status=status.HTTP_200_OK)
+        room_id = request.GET.get('room_id')
+        try:
+            if room_id:
+                ConversationHistory.objects.filter(user=request.user, room_id=room_id).delete()
+                return Response({"message": "Deleted"}, status=status.HTTP_200_OK)
+            else:
+                return Response({"error": "Please select room"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            print(str(e))
+            return Response({"error": "Invalid room id"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ChatbotEndpoint(APIView):
