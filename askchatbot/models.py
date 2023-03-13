@@ -8,6 +8,7 @@ class ConversationHistory(models.Model):
     """
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     conversation_id = models.PositiveIntegerField(default=0)
+    room_id = models.CharField(max_length=250, blank=True, null=True)
     user_input = models.TextField(blank=True, null=True)
     chatbot_response = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
