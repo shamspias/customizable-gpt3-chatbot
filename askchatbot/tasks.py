@@ -24,21 +24,21 @@ def chatbot_response(chatbot_prompt, conversation_id, language):
 
 
 @shared_task
-def generate_response_chat(message_list):
+def generate_response_chat(message_list, conversation_id, language):
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[
                      {"role": "system",
                       "content": "You are an AI named vegancoach and you are in a conversation with a human. You can "
                                  "answer questions, provide information, and help with a wide variety of tasks based "
-                                 "on the VEGAN NUTRITION."},
+                                 "on the vegan nutrition."},
                      {"role": "user", "content": "Who are you?"},
                      {"role": "assistant", "content": "I am the vegancoach to guide you proper"},
                  ] + message_list
     )
     print(response)
-
-    return response["choices"][0]["message"]["content"].strip()
+    message = response["choices"][0]["message"]["content"].strip()
+    return [message, conversation_id]
 
 
 @shared_task
