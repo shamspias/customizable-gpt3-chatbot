@@ -28,16 +28,25 @@ class ConversationalHistory(APIView):
     """
 
     def get(self, request):
-        conversations = ConversationHistory.objects.filter(user=request.user).order_by('-created_at')
-        data = []
-        for conversation in conversations:
-            data.append({
-                "user_message": conversation.user_input,
-                "bot_response": conversation.chatbot_response,
-                "createdAt": conversation.created_at,
-                "conversation_id": conversation.conversation_id,
-            })
-        return Response({"data": data}, status=status.HTTP_200_OK)
+        room_id = request.GET.get('room_id')
+        try:
+            if room_id:
+                conversations = ConversationHistory.objects.filter(user=request.user, room_id=room_id).order_by(
+                    '-created_at')
+                data = []
+                for conversation in conversations:
+                    data.append({
+                        "user_message": conversation.user_input,
+                        "bot_response": conversation.chatbot_response,
+                        "createdAt": conversation.created_at,
+                        "conversation_id": conversation.conversation_id,
+                    })
+                return Response({"data": data}, status=status.HTTP_200_OK)
+            else:
+                return Response({"error": "Please select room"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            print(str(e))
+            return Response({"error": "Invalid room id"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class DeleteConversationalHistory(APIView):
