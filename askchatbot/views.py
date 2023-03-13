@@ -133,9 +133,11 @@ class ChatbotEndpoint(APIView):
                 "role": "user", "content": user_input
             }
         )
+        # todo need to fix room object
         # save the user input into database
         try:
-            last_conversation = ConversationHistory.objects.filter(user=request.user).latest('conversation_id')
+            last_conversation = ConversationHistory.objects.filter(user=request.user, room_id=room_id).latest(
+                'conversation_id')
             conversation_id = last_conversation.conversation_id
             conversation_id += 1
         except Exception as e:
@@ -199,41 +201,33 @@ class ChatbotEndpoint(APIView):
             return Response({"error: Null Response"}, status=status.HTTP_403_FORBIDDEN)
 
 
-class SpeechToText(APIView):
-    """
-    API View to Voice to Text
-    """
-
-    def post(self, request):
-        try:
-            recognizer = sr.Recognizer()
-            # audio_file = sr.AudioData(request.body, sample_rate=44100, sample_width=2,
-            # endpoint=sr.AudioFile.AudioData)
-            audio_file = sr.AudioData(request.body, sample_rate=44100, sample_width=2)
-            text = recognizer.recognize_google(audio_file)
-
-            return Response({'text': text})
-        except sr.UnknownValueError:
-            return Response({'error': 'Speech recognition could not understand the audio'}, status=400)
-        except sr.RequestError as e:
-            return Response({'error': f'Speech recognition error: {e}'}, status=500)
-
-
 class ChatbotBasicListCreateAPIView(generics.ListCreateAPIView):
+    """
+
+    """
     queryset = ChatbotBasic.objects.all()
     serializer_class = ChatbotBasicSerializer
 
 
 class LanguageListCreateAPIView(generics.ListCreateAPIView):
+    """
+    API View to show list of all the Language
+    """
     queryset = Language.objects.all()
     serializer_class = LanguageSerializer
 
 
 class AdsListCreateAPIView(generics.ListCreateAPIView):
+    """
+    API View to show list of adds
+    """
     queryset = Ads.objects.all()
     serializer_class = AdsSerializer
 
 
 class ChatbotSuggestionsListCreateAPIView(generics.ListCreateAPIView):
+    """
+    API view to show chatbot suggestion
+    """
     queryset = ChatbotSuggestions.objects.all()
     serializer_class = ChatbotSuggestionsSerializer
