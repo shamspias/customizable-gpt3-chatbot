@@ -8,7 +8,7 @@ RASA_API = settings.RASA_API_URL
 
 
 @shared_task
-def chatbot_response(chatbot_prompt, conversation_id, language):
+def generate_response(chatbot_prompt, conversation_id, language):
     openai.api_key = settings.OPEN_AI_KEY
     prompt = f"{chatbot_prompt}"
     completions = openai.Completion.create(
