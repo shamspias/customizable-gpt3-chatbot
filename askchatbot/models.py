@@ -2,13 +2,26 @@ from django.db import models
 from ausers.models import User
 
 
+class ChatRoom(models.Model):
+    """
+    To store all conversions by room
+    """
+    roomTitle = models.CharField(max_length=250, blank=True, null=True)
+    favourite = models.BooleanField(default=False)
+    archive = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.roomTitle
+
+
 class ConversationHistory(models.Model):
     """
     To store the conversation history
     """
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     conversation_id = models.PositiveIntegerField(default=0)
-    room_id = models.CharField(max_length=250, blank=True, null=True)
+    room_id = models.ForeignKey(ChatRoom, on_delete=models.CASCADE)
     user_input = models.TextField(blank=True, null=True)
     chatbot_response = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
